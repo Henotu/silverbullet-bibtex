@@ -1,7 +1,7 @@
 ---
-name: Library/you/hello/PLUG
+name: Library/henotu/bibtex/PLUG
 tags: meta/library
 files:
-- hello.plug.js
+- bibtex.plug.js
 ---
 This library does A, B and C.

@@ -3,9 +3,10 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "build": "npx plug-compile hello.plug.yaml"
+    "build": "npx plug-compile bibtex.plug.yaml"
   },
   "dependencies": {
+    "@retorquere/bibtex-parser": "^9.0.29",
     "@silverbulletmd/silverbullet": ">=2.5.3"
   }
 }

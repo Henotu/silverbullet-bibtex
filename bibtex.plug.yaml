@@ -1,0 +1,6 @@
+name: bibtex
+functions:
+  completion:
+    path: "./completion.ts:bibTexCompletion"
+    events:
+      - "editor:complete"
