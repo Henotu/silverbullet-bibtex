@@ -1,9 +1,9 @@
-import { editor, space } from "@silverbulletmd/silverbullet/syscalls";
-import {parse, Library} from "@retorquere/bibtex-parser";
+import { editor, space, syscall } from "@silverbulletmd/silverbullet/syscalls";
+import {parse, Library, Entry} from "@retorquere/bibtex-parser";
 import type { CompleteEvent } from "@silverbulletmd/silverbullet/type/client";
 import { Decoration } from "@codemirror/view"
-import {HtmlWidget} from "./widgets";
-let entries = [];
+
+let entries: Entry[] = [];
 let lastConfigUpdate = 0;
 
 async function scanLibraries() {
@@ -29,24 +29,36 @@ async function scanLibraries() {
 export async function index(body: string, pageName) {
   await scanLibraries()
 
+  const format = function(content: string, tooltip: string) {
+    let tooltiptext = tooltip.replace(/[\\"']/g, '\\$&') //encode(tooltip)
+    console.log(tooltiptext)
+    return syscall("lua.evalExpression", `widget.html "<div class='tooltip'>${content}<span class='tooltiptext'>${tooltiptext}</span></div>"`)
+  }
+
   let match = /\(([^)]*)\)[^(]*$/.exec(body)
 
   if (match) {
     const [_, context] = match
     let ref = body.substring(0, body.length - (context.length + 2))
-    console.log(match, ref, context)
     for (const [key, entry] of entries.entries()) {
       if (entry.key === ref) {
-        return context ? `[${key}, ${context}]` : `[${key}]`
+        return format(
+          context ? `[${key}, ${context}]` : `[${key}]`,
+          entry.fields.title,
+        )
       }
     }
   }
 
   for (const [key, entry] of entries.entries()) {
     if (entry.key === body) {
-        return `[${key}]`
+      return format(
+        `[${key}]`,
+        entry.fields.title,
+      )
     }
   }
+
   return body
 }
 
