@@ -1,5 +1,8 @@
 name: bibtex
 functions:
+  getIndex:
+    path: "./completion.ts:index"
+    syscall: "bibtex.ref"
   completion:
     path: "./completion.ts:bibTexCompletion"
     events:
