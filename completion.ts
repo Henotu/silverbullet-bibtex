@@ -1,7 +1,6 @@
 import { editor, space, syscall } from "@silverbulletmd/silverbullet/syscalls";
 import {parse, Library, Entry} from "@retorquere/bibtex-parser";
 import type { CompleteEvent } from "@silverbulletmd/silverbullet/type/client";
-import { Decoration } from "@codemirror/view"
 
 let entries: Entry[] = [];
 let lastConfigUpdate = 0;
@@ -30,8 +29,7 @@ export async function index(body: string, pageName) {
   await scanLibraries()
 
   const format = function(content: string, tooltip: string) {
-    let tooltiptext = tooltip.replace(/[\\"']/g, '\\$&') //encode(tooltip)
-    console.log(tooltiptext)
+    let tooltiptext = escape(tooltip)
     return syscall("lua.evalExpression", `widget.html "<div class='tooltip'>${content}<span class='tooltiptext'>${tooltiptext}</span></div>"`)
   }
 
@@ -48,6 +46,11 @@ export async function index(body: string, pageName) {
         )
       }
     }
+    let formattedRef = `<span style='color: red'>@${ref}</span>`
+    return format(
+      context ? `[${formattedRef}, ${context}]` : `[${formattedRef}]`,
+      `Could not find reference with key '${ref}'`,
+    )
   }
 
   for (const [key, entry] of entries.entries()) {
@@ -59,7 +62,14 @@ export async function index(body: string, pageName) {
     }
   }
 
-  return body
+  return format(
+    `[${body}]`,
+    `Could not find reference with key '${body}'`,
+  )
+}
+
+function escape(str: string) {
+  return str.replace(/[\\"']/g, '\\$&')
 }
 
 // Mostly taken from
@@ -99,10 +109,51 @@ export async function bibTexCompletion({
     }
   }
 
-  console.log(options)
   return {
     from: pos - fullMatch.length,
     filter: false,
     options: options,
   };
+}
+
+export async function bottom() {
+  await scanLibraries()
+  let text = await editor.getText()
+  let keys = new Set()
+
+  const regex = /@(.*?)( |$)/gm
+
+  let result;
+  while ((result = regex.exec(text)) !== null) {
+    keys.add(/(.*?)(\(.*\))?$/gm.exec(result[1])[1])
+  }
+
+  console.log(keys)
+
+  if (keys.size === 0) {
+    return
+  }
+
+  const format = function (entry: Entry) {
+    const authors = entry.fields.author
+    let authorString
+    if (authors.length == 0) {
+      authorString = ""
+    } else if (authors.length == 1) {
+      const author = authors[0]
+      authorString = `${author.firstName} ${author.initial} ${author.lastName}: `
+    } else {
+      authorString = `${authors[0].lastName} et al: `
+    }
+    return `${authorString}&quot;${entry.fields.title}&quot;`
+  }
+
+  let list =
+    entries
+      .map((e, s) => [e, s])
+      .filter(([e, _]) => keys.has(e.key))
+      .map(([e, i], _) => `<li value='i'>${format(e)}</li>`)
+      .join("")
+
+  return syscall("lua.evalExpression", `widget.html("<h2>References</h2><ol>${escape(list)}</ol>")`)
 }

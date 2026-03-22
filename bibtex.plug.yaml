@@ -7,3 +7,7 @@ functions:
     path: "./completion.ts:bibTexCompletion"
     events:
       - "editor:complete"
+  bottomWidget:
+    path: "./completion.ts:bottom"
+    events:
+      - "hooks:renderBottomWidgets"
