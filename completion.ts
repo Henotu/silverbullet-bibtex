@@ -152,7 +152,7 @@ export async function bottom() {
     entries
       .map((e, s) => [e, s])
       .filter(([e, _]) => keys.has(e.key))
-      .map(([e, i], _) => `<li value='i'>${format(e)}</li>`)
+      .map(([e, i], _) => `<li value='${i}'>${format(e)}</li>`)
       .join("")
 
   return syscall("lua.evalExpression", `widget.html("<h2>References</h2><ol>${escape(list)}</ol>")`)
