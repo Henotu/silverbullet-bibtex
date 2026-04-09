@@ -18,7 +18,7 @@ syntax.define {
 ```space-style
 .tooltip {
   position: relative;
-  display: inline-block;
+  display: inherit;
   cursor: pointer;
 }
 
