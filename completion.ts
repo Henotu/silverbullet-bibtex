@@ -1,8 +1,9 @@
 import { editor, space, syscall } from "@silverbulletmd/silverbullet/syscalls";
 import {parse, Library, Entry} from "@retorquere/bibtex-parser";
 import type { CompleteEvent } from "@silverbulletmd/silverbullet/type/client";
+import {Citation} from "./citation";
 
-let entries: Entry[] = [];
+let citations: Citation[] = [];
 let lastConfigUpdate = 0;
 
 async function scanLibraries() {
@@ -19,10 +20,11 @@ async function scanLibraries() {
     }
   }
 
-  entries = libraries
+  citations = libraries
     .map(l => l.entries)
     .flat()
     .sort((e1, e2) => e1.key.localeCompare(e2.key))
+    .map(e => new Citation(e))
 }
 
 export async function index(body: string, pageName) {
@@ -38,11 +40,11 @@ export async function index(body: string, pageName) {
   if (match) {
     const [_, context] = match
     let ref = body.substring(0, body.length - (context.length + 2))
-    for (const [key, entry] of entries.entries()) {
-      if (entry.key === ref) {
+    for (const [key, entry] of citations.entries()) {
+      if (entry.getKey() === ref) {
         return format(
           context ? `[${key}, ${context}]` : `[${key}]`,
-          entry.fields.title,
+          entry.getTitle(),
         )
       }
     }
@@ -53,11 +55,11 @@ export async function index(body: string, pageName) {
     )
   }
 
-  for (const [key, entry] of entries.entries()) {
-    if (entry.key === body) {
+  for (const [key, entry] of citations.entries()) {
+    if (entry.getKey() === body) {
       return format(
         `[${key}]`,
-        entry.fields.title,
+        entry.getTitle(),
       )
     }
   }
@@ -99,11 +101,11 @@ export async function bibTexCompletion({
 
   let options = [];
 
-  for (const entry of entries) {
-    if (entry.key.includes(curName)) {
+  for (const entry of citations) {
+    if (entry.getKey().includes(curName)) {
       options.push({
-        detail: entry.fields.title,
-        label: `@${entry.key}()`,
+        detail: entry.getTitle(),
+        label: `@${entry.getKey()}()`,
         type: "bibtex",
       })
     }
@@ -134,25 +136,11 @@ export async function bottom() {
     return
   }
 
-  const format = function (entry: Entry) {
-    const authors = entry.fields.author
-    let authorString
-    if (authors.length == 0) {
-      authorString = ""
-    } else if (authors.length == 1) {
-      const author = authors[0]
-      authorString = `${author.firstName} ${author.initial} ${author.lastName}: `
-    } else {
-      authorString = `${authors[0].lastName} et al: `
-    }
-    return `${authorString}&quot;${entry.fields.title}&quot;`
-  }
-
   let list =
-    entries
+    citations
       .map((e, s) => [e, s])
-      .filter(([e, _]) => keys.has(e.key))
-      .map(([e, i], _) => `<li value='${i}'>${format(e)}</li>`)
+      .filter(([e, _]) => keys.has(e.getKey()))
+      .map(([e, i], _) => `<li value='${i}'>${e.formatReference()}</li>`)
       .join("")
 
   return syscall("lua.evalExpression", `widget.html("<h2>References</h2><ol>${escape(list)}</ol>")`)
